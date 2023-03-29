@@ -1,0 +1,217 @@
+-- Instruções para criação de tabela do banco Spotify
+
+-- artista 
+create table artista (
+	id integer primary key autoincrement not null,
+	nome text,
+	popularidade integer,
+	seguidores integer
+)
+
+-- pais
+create table pais (
+	id integer primary key autoincrement not null,
+	nome text,
+	sigla text
+)
+
+-- musica
+create table musica (
+	id integer primary key autoincrement not null, -- chave primaria
+	nome text,
+	url text,
+	id_artista integer,
+	-- chave estrangeira: PS: a referencia tem que ter o mesmo tipo PK
+	-- Minha FK nesta tabela, deve fazer referencia a tabela artista na coluna id
+	foreign key(id_artista) references artista(id)
+)
+
+-- genero
+create table genero (
+	id integer primary key autoincrement not null,
+	nome text
+)
+
+-- genero_artista
+create table genero_artista (
+	id integer primary key autoincrement not null, -- chave primaria
+	id_genero integer,
+	id_artista integer,
+	foreign key(id_genero) references genero(id)
+	foreign key(id_artista) references artista(id)
+)
+
+-- musica_pais
+create table musica_pais (
+	id integer primary key autoincrement not null, -- chave primaria
+	streams integer,
+	posicao integer,
+	id_musica integer,
+	id_pais integer,
+	foreign key(id_musica) references musica(id)
+	foreign key(id_pais) references pais(id)
+)
+
+-- Instruções p/ Alter Table
+
+-- Renomear tabelas
+alter table musica_pais rename to pais_musica;
+
+-- Renomear colunas
+alter table musica rename column nome to nome_musica;
+alter table artista rename column nome to nome_artista;
+alter table genero rename column nome to nome_genero;
+
+-- Adicionar colunas
+alter table pais add column longitude text;
+alter table pais add column latitude text;
+
+-- deletar colunas
+alter table pais drop column longitude;
+alter table pais drop column latitude;
+
+-- deletar tabela - MUITO CUIDADO
+drop table artista;
+
+---------------------------------------------------------------
+-- DML
+
+-- Inserção de dados
+
+-- genero
+insert into genero (nome_genero) values ('pop'),('rock'),
+('sertanejo'),('forró'), ('blues'), ('jazz'), ('funk'), 
+('folk'), ('contry')
+
+-- pais 
+insert into pais (nome, sigla) values ('Brasil', 'br')
+insert into pais (nome, sigla) values ('Estados Unidos', 'us')
+insert into pais (nome, sigla) values ('México', 'mx')
+
+-- artista 
+insert into artista (nome_artista, popularidade, seguidores) values 
+('anitta', 100, 800),
+('coldplay', 80, 900),
+('falamansa', 90, 800)
+
+-- musica 
+-- Só deixa cadastrar caso a FK exista
+pragma foreign_keys = on;
+
+--inserção
+insert into musica (nome_musica, id_artista) values
+('viva la vida', 2)
+insert into musica (nome_musica, id_artista) values
+('envolver', 1)
+
+-- Update de dados
+
+update artista 
+set seguidores = 9500
+where id = 2 -- id do ColdPlay
+
+update artista 
+set popularidade = 100
+where id = 2 -- id do ColdPlay
+
+-- Deletar 
+
+delete from pais -- deleta tudo
+
+delete from genero_artista
+where id >= 1
+
+-- insert genero_artista
+insert into genero_artista (id_genero, id_artista) values
+(1, 1), 
+(1, 2), 
+(7, 1)
+
+-- Recupera a informação com os atributos certos
+select g.nome_genero, a.nome_artista 
+from genero g 
+inner join genero_artista ga on g.id = ga.id_genero
+inner join artista a on a.id = ga.id_artista
+
+--DQL
+
+--Exemplos consultas
+
+--1. Selecionar tudo da tabela (Select * From ???)
+select * from musica
+select * from pais
+
+--2. Selecionar nome da tabela artista - Só 1 ou + itens
+select nome from artista 
+select nome, seguidores from artista 
+
+--3. Selecionar quantidade total de alguma tabela
+select count(*) from artista
+
+--3. Selecionar quantidade total de alguma tabela com restrição
+select count(*) from artista
+where nome like 'L%'
+
+--4. Selecionar tudo de uma tabela com restrição
+select * from artista
+where nome like '%am%'
+
+--5. Selecionar top 10 artistas com maior popularidade
+select nome, popularidade from artista 
+order by popularidade desc 
+limit 10
+
+--5. Selecionar musica mais tocada (streams)
+--TODO
+
+--6. Codigo da banda Paramore
+select id from artista 
+where nome = 'Paramore'
+
+--7. Musica do artista
+select * from musica 
+where id_artista = 155
+
+--8. Codigo do Drake
+select id from artista 
+where nome = 'Drake'
+
+--9. Musica do artista
+select * from musica 
+where id_artista = 9
+
+--10. Musicas do Drake subconsulta
+select * from musica 
+where id_artista = (select id from artista 
+					where nome = 'Drake')
+
+--11. Musicas de artistas subconsulta - como uma lista
+select * from musica 
+where id_artista in (select id from artista 
+					where nome like 'C%')
+					--Como se retornasse uma lista, por isso o in 
+order by id_artista
+
+--12. Quantidade de musicas que são tocadas pelos 
+--    artistas que começam com A ordenando
+select id_artista, count(*) from musica 
+where id_artista in (select id from artista 
+					where nome like 'A%')
+group by id_artista --agrupa pelo id
+order by count(*) desc
+
+--13. LIstagem de 2 tabelas diferentes que estão ligadas
+select a.nome, m.nome
+from artista a, musica m --a e m serão apelidos 
+where a.id = m.id_artista --conecta os registros
+      and a.nome like 'B%'
+
+--14. Artistas e musicas , filtrando artistas entre 10000 e 
+--	  20000 seguidores, renomeando as colunas
+select a.nome as nome_artista, 
+	   a.seguidores, 
+	   m.nome as nome_musica --Apelido para a coluna nome musica
+from artista a, musica m 
+where a.id = m.id_artista
+	  and a.seguidores between 10000 and 20000
+order by a.seguidores desc
